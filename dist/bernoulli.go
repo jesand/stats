@@ -9,7 +9,8 @@ func NewBernoulliDist(bias float64) *BernoulliDist {
 	return dist
 }
 
-// A Bernoulli distribution
+// A Bernoulli distribution.
+// See: https://en.wikipedia.org/wiki/Bernoulli_distribution
 type BernoulliDist struct {
 	*DenseMutableDiscreteDist
 }

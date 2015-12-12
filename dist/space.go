@@ -17,6 +17,26 @@ type RealSpace interface {
 	Sup() float64
 }
 
+// A subset of the reals on a continuous closed interval
+type RealIntervalSpace struct {
+	Min, Max float64
+}
+
+// The infimum (min) value in the space, or negative infinity
+func (space RealIntervalSpace) Inf() float64 {
+	return space.Min
+}
+
+// The supremum (max) value in the space, or positive infinity
+func (space RealIntervalSpace) Sup() float64 {
+	return space.Max
+}
+
+// The unit interval
+func NewUnitIntervalSpace() RealIntervalSpace {
+	return RealIntervalSpace{Min: 0, Max: 1}
+}
+
 // A sample space over a discrete set
 type DiscreteSpace interface {
 

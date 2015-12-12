@@ -8,9 +8,6 @@ import (
 // Represents a distribution over reals for a random variable
 type RealDist interface {
 
-	// The value of the CDF: Pr(X <= val) for random variable X over this space
-	CDF(val float64) float64
-
 	// The mean, or expected value, of the random variable
 	Mean() float64
 
@@ -26,13 +23,19 @@ type ContinuousDist interface {
 	RealDist
 
 	// Sample an outcome from the distribution
-	Sample() Outcome
+	Sample() float64
 
 	// Sample a sequence of n outcomes from the distribution
-	SampleN(n int) []Outcome
+	SampleN(n int) []float64
 
 	// Return the corresponding sample space
-	Space() DiscreteSpace
+	Space() RealSpace
+
+	// The value of the CDF: Pr(X <= val) for random variable X over this space
+	CDF(val float64) float64
+
+	// Return the density at a given value
+	PDF(val float64) float64
 
 	// Return the probability of a given interval
 	Prob(from, to float64) float64
@@ -116,4 +119,31 @@ type DefDiscreteDistLgProb struct{ dist DiscreteDist }
 // Return the log probability (base 2) of a given outcome
 func (dist DefDiscreteDistLgProb) LgProb(outcome Outcome) float64 {
 	return math.Log2(dist.dist.Prob(outcome))
+}
+
+// A default implementation of SampleN() for a ContinuousDist
+type DefContinuousDistSampleN struct{ dist ContinuousDist }
+
+func (dist DefContinuousDistSampleN) SampleN(n int) []float64 {
+	var outcomes []float64
+	for i := 0; i < n; i++ {
+		outcomes = append(outcomes, dist.dist.Sample())
+	}
+	return outcomes
+}
+
+// A default implementation of Prob() for a ContinuousDist
+type DefContinuousDistProb struct{ dist ContinuousDist }
+
+// Return the log probability (base 2) of a given outcome
+func (dist DefContinuousDistProb) Prob(from, to float64) float64 {
+	return dist.dist.CDF(to) - dist.dist.CDF(from)
+}
+
+// A default implementation of LgProb() for a ContinuousDist
+type DefContinuousDistLgProb struct{ dist ContinuousDist }
+
+// Return the log probability (base 2) of a given outcome
+func (dist DefContinuousDistLgProb) LgProb(from, to float64) float64 {
+	return math.Log2(dist.dist.Prob(from, to))
 }

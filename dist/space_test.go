@@ -5,6 +5,20 @@ import (
 	"testing"
 )
 
+func TestUnitInterval(t *testing.T) {
+	var dist = NewUnitIntervalSpace()
+	Convey("Test UnitInterval interfaces", t, func() {
+		So(dist, ShouldImplement, (*Space)(nil))
+		So(dist, ShouldImplement, (*RealSpace)(nil))
+	})
+	Convey("Test UnitInterval.Inf()", t, func() {
+		So(dist.Inf(), ShouldEqual, 0)
+	})
+	Convey("Test UnitInterval.Sup()", t, func() {
+		So(dist.Sup(), ShouldEqual, 1)
+	})
+}
+
 func TestBooleanSpace(t *testing.T) {
 	var dist BooleanSpace
 	Convey("Test BooleanSpace interfaces", t, func() {
