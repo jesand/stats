@@ -31,6 +31,7 @@ type DiscreteSpace interface {
 // A discrete subset of the reals
 type DiscreteRealSpace interface {
 	DiscreteSpace
+	RealSpace
 
 	// The real value of an outcome
 	F64Value(outcome Outcome) float64
@@ -39,6 +40,16 @@ type DiscreteRealSpace interface {
 // A sample space over boolean outcomes
 type BooleanSpace struct{}
 
+// The infimum (min) value in the space, or negative infinity
+func (sp BooleanSpace) Inf() float64 {
+	return 0
+}
+
+// The supremum (max) value in the space, or positive infinity
+func (sp BooleanSpace) Sup() float64 {
+	return 1
+}
+
 // Return the cardinality of the space
 func (sp BooleanSpace) Size() int {
 	return 2
@@ -46,14 +57,14 @@ func (sp BooleanSpace) Size() int {
 
 // The real value of an outcome
 func (sp BooleanSpace) F64Value(outcome Outcome) float64 {
-	if outcome == 1 {
-		return 1.0
-	} else {
+	if outcome == 0 {
 		return 0.0
+	} else {
+		return 1.0
 	}
 }
 
 // Return the specified outcome as a boolean
 func (sp BooleanSpace) BoolValue(outcome Outcome) bool {
-	return outcome == 1
+	return outcome != 0
 }
