@@ -9,9 +9,17 @@ import (
 func TestBernoulli(t *testing.T) {
 	Convey("Test Bernoulli interfaces", t, func() {
 		dist := NewBernoulliDist(0.5)
+		So(dist, ShouldImplement, (*Dist)(nil))
+		So(dist, ShouldImplement, (*DiscreteDist)(nil))
 		So(dist, ShouldImplement, (*MutableDiscreteDist)(nil))
 		So(dist, ShouldImplement, (*RealDist)(nil))
-		So(dist.Space(), ShouldImplement, (*DiscreteRealSpace)(nil))
+		So(dist, ShouldImplement, (*DiscreteRealDist)(nil))
+
+		space := dist.Space()
+		So(space, ShouldImplement, (*Space)(nil))
+		So(space, ShouldImplement, (*DiscreteSpace)(nil))
+		So(space, ShouldImplement, (*RealSpace)(nil))
+		So(space, ShouldImplement, (*DiscreteRealSpace)(nil))
 	})
 
 	Convey("Test Bernoulli dist", t, func() {

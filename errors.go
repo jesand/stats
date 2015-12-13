@@ -14,12 +14,16 @@ func ErrfNotInDomain(outcome int) Error {
 }
 
 func ErrfInvalidProb(prob float64) Error {
-	return Errorf("Invalid discrete probability %f", prob)
+	return Errorf("Invalid probability %f", prob)
 }
 
 func ErrfFactorVarNum(numVars, numParams, numAdj int) Error {
 	return Errorf("Factor expected %d variables and %d parameters, but has %d adjacent",
 		numVars, numParams, numAdj)
+}
+
+func ErrfUnsupportedDist(dist interface{}) Error {
+	return Errorf("Unsupported distribution type %T", dist)
 }
 
 // An error message

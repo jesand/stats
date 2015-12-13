@@ -82,6 +82,12 @@ type DiscreteDist interface {
 	LgProb(outcome Outcome) float64
 }
 
+// A discrete distribution over the reals
+type DiscreteRealDist interface {
+	DiscreteDist
+	RealDist
+}
+
 // A discrete distribution whose underlying probability measure can change
 type MutableDiscreteDist interface {
 

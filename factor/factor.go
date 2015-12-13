@@ -3,6 +3,7 @@ package factor
 import (
 	"github.com/jesand/stats"
 	"github.com/jesand/stats/dist"
+	"github.com/jesand/stats/variable"
 )
 
 // A connecting node in a factor graph. A factor is a node with edges to
@@ -11,14 +12,14 @@ import (
 type Factor interface {
 
 	// The adjacent random variables
-	Adjacent() []RandomVariable
+	Adjacent() []variable.RandomVariable
 
 	// The factor's current score, based on the values of adjacent variables
 	Score() float64
 }
 
 // Create a new factor which scores based on a probability distribution
-func NewDistFactor(vars []RandomVariable, distr dist.Dist) *DistFactor {
+func NewDistFactor(vars []variable.RandomVariable, distr dist.Dist) *DistFactor {
 	return &DistFactor{
 		Vars: vars,
 		Dist: distr,
@@ -27,12 +28,12 @@ func NewDistFactor(vars []RandomVariable, distr dist.Dist) *DistFactor {
 
 // A factor which scores variables based on a probability distribution
 type DistFactor struct {
-	Vars []RandomVariable
+	Vars []variable.RandomVariable
 	Dist dist.Dist
 }
 
 // The adjacent random variables
-func (factor DistFactor) Adjacent() []RandomVariable {
+func (factor DistFactor) Adjacent() []variable.RandomVariable {
 	return factor.Vars
 }
 

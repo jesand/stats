@@ -9,9 +9,13 @@ import (
 func TestBeta(t *testing.T) {
 	Convey("Test Beta interfaces", t, func() {
 		dist := NewBetaDist(1, 1)
-		So(dist, ShouldImplement, (*ContinuousDist)(nil))
+		So(dist, ShouldImplement, (*Dist)(nil))
 		So(dist, ShouldImplement, (*RealDist)(nil))
-		So(dist.Space(), ShouldImplement, (*RealSpace)(nil))
+		So(dist, ShouldImplement, (*ContinuousDist)(nil))
+
+		space := dist.Space()
+		So(space, ShouldImplement, (*Space)(nil))
+		So(space, ShouldImplement, (*RealSpace)(nil))
 	})
 
 	Convey("Test Beta dist", t, func() {

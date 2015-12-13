@@ -1,4 +1,4 @@
-package factor
+package variable
 
 import (
 	"github.com/jesand/stats/dist"
