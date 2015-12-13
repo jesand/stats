@@ -15,6 +15,21 @@ type BernoulliDist struct {
 	*DenseMutableDiscreteDist
 }
 
+// Return a "score" (log density or log mass) for the given values
+func (dist BernoulliDist) Score(vars, params []float64) float64 {
+	return dist.DenseMutableDiscreteDist.Score(vars, []float64{0, params[0]})
+}
+
+// The number of parameters in the distribution: the weights
+func (dist BernoulliDist) NumParams() int {
+	return 1
+}
+
+// Update the distribution parameters
+func (dist *BernoulliDist) SetParams(vals []float64) {
+	dist.SetBias(vals[0])
+}
+
 // Return the space as a BooleanSpace
 func (dist *BernoulliDist) BSpace() BooleanSpace {
 	return dist.space.(BooleanSpace)

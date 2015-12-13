@@ -2,6 +2,8 @@ package dist
 
 import (
 	"github.com/ematvey/gostat"
+	"github.com/jesand/stats"
+	"math"
 )
 
 // Produce a new Beta distribution
@@ -36,6 +38,30 @@ func (dist Beta) Space() RealSpace {
 	return dist.space
 }
 
+// Return a "score" (log density or log mass) for the given values
+func (dist Beta) Score(vars, params []float64) float64 {
+	alpha, beta := dist.Alpha, dist.Beta
+	dist.Alpha, dist.Beta = params[0], params[1]
+	score := math.Log2(dist.PDF(vars[0]))
+	dist.Alpha, dist.Beta = alpha, beta
+	return score
+}
+
+// The number of random variables the distribution is over
+func (dist Beta) NumVars() int {
+	return 1
+}
+
+// The number of parameters in the distribution
+func (dist Beta) NumParams() int {
+	return 2
+}
+
+// Update the distribution parameters
+func (dist *Beta) SetParams(vals []float64) {
+	dist.Alpha, dist.Beta = vals[0], vals[1]
+}
+
 // Return the density at a given value
 func (dist Beta) PDF(val float64) float64 {
 	return stat.Beta_PDF_At(dist.Alpha, dist.Beta, val)
@@ -57,7 +83,7 @@ func (dist Beta) Mode() float64 {
 		a, b := dist.Alpha, dist.Beta
 		return (a - 1) / (a + b - 2)
 	}
-	panic(Errorf("Beta(%f, %f) has no mode", dist.Alpha, dist.Beta))
+	panic(stats.Errorf("Beta(%f, %f) has no mode", dist.Alpha, dist.Beta))
 }
 
 // The variance of the random variable

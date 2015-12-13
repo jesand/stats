@@ -14,7 +14,18 @@ func TestBernoulli(t *testing.T) {
 		So(dist.Space(), ShouldImplement, (*DiscreteRealSpace)(nil))
 	})
 
-	Convey("Test Bernoulli PMF", t, func() {
+	Convey("Test Bernoulli dist", t, func() {
+		dist := NewBernoulliDist(0.1)
+		So(dist.NumVars(), ShouldEqual, 1)
+		So(dist.NumParams(), ShouldEqual, 1)
+		So(dist.Prob(1), ShouldEqual, 0.1)
+		So(dist.Score([]float64{1}, []float64{0.5}), ShouldEqual, -1)
+		So(dist.Prob(1), ShouldEqual, 0.1)
+		dist.SetParams([]float64{0.5})
+		So(dist.Prob(1), ShouldEqual, 0.5)
+	})
+
+	Convey("Test Bernoulli Prob", t, func() {
 		dist := NewBernoulliDist(0.1)
 		So(dist.Prob(0), ShouldAlmostEqual, 0.9)
 		So(dist.Prob(1), ShouldAlmostEqual, 0.1)

@@ -1,9 +1,26 @@
 package dist
 
 import (
+	"github.com/jesand/stats"
 	"math"
 	"math/rand"
 )
+
+// Represents a probability distribution
+type Dist interface {
+
+	// Return a "score" (log density or log mass) for the given values
+	Score(vars, params []float64) float64
+
+	// The number of random variables the distribution is over
+	NumVars() int
+
+	// The number of parameters in the distribution
+	NumParams() int
+
+	// Update the distribution parameters
+	SetParams(vals []float64)
+}
 
 // Represents a distribution over reals for a random variable
 type RealDist interface {
@@ -20,6 +37,7 @@ type RealDist interface {
 
 // Represents a continuous distribution over a subset of reals
 type ContinuousDist interface {
+	Dist
 	RealDist
 
 	// Sample an outcome from the distribution
@@ -46,6 +64,7 @@ type ContinuousDist interface {
 
 // Represents a discrete distribution over a sample space
 type DiscreteDist interface {
+	Dist
 
 	// Sample an outcome from the distribution
 	Sample() Outcome
@@ -99,7 +118,7 @@ func (dist DefDiscreteDistSample) Sample() Outcome {
 			return i
 		}
 	}
-	panic(ErrNotNormalized)
+	panic(stats.ErrNotNormalized)
 }
 
 // A default implementation of SampleN() for a DiscreteDist

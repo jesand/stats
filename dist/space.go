@@ -17,6 +17,14 @@ type RealSpace interface {
 	Sup() float64
 }
 
+// Create a new RealIntervalSpace with the specified bounds
+func NewRealIntervalSpace(min, max float64) *RealIntervalSpace {
+	return &RealIntervalSpace{
+		Min: min,
+		Max: max,
+	}
+}
+
 // A subset of the reals on a continuous closed interval
 type RealIntervalSpace struct {
 	Min, Max float64
@@ -55,6 +63,9 @@ type DiscreteRealSpace interface {
 
 	// The real value of an outcome
 	F64Value(outcome Outcome) float64
+
+	// The outcome corresponding to a real value
+	Outcome(value float64) Outcome
 }
 
 // A sample space over boolean outcomes
@@ -81,6 +92,15 @@ func (sp BooleanSpace) F64Value(outcome Outcome) float64 {
 		return 0.0
 	} else {
 		return 1.0
+	}
+}
+
+// The outcome corresponding to a real value
+func (sp BooleanSpace) Outcome(value float64) Outcome {
+	if value == 0.0 {
+		return 0
+	} else {
+		return 1
 	}
 }
 

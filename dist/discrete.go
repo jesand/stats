@@ -1,5 +1,10 @@
 package dist
 
+import (
+	"github.com/jesand/stats"
+	"math"
+)
+
 // Make a new instance of DenseMutableDiscreteDist
 func NewDenseMutableDiscreteDist(space DiscreteSpace) *DenseMutableDiscreteDist {
 	dist := &DenseMutableDiscreteDist{
@@ -29,6 +34,27 @@ type DenseMutableDiscreteDist struct {
 	totalWeight float64
 }
 
+// Return a "score" (log density or log mass) for the given values
+func (dist DenseMutableDiscreteDist) Score(vars, params []float64) float64 {
+	outcome := dist.space.(DiscreteRealSpace).Outcome(vars[0])
+	return math.Log2(params[int(outcome)])
+}
+
+// The number of random variables the distribution is over
+func (dist DenseMutableDiscreteDist) NumVars() int {
+	return 1
+}
+
+// The number of parameters in the distribution: the weights
+func (dist DenseMutableDiscreteDist) NumParams() int {
+	return len(dist.weights)
+}
+
+// Update the distribution parameters
+func (dist *DenseMutableDiscreteDist) SetParams(vals []float64) {
+	copy(dist.weights[:], vals[:])
+}
+
 // Return the sample space
 func (dist DenseMutableDiscreteDist) Space() DiscreteSpace {
 	return dist.space
@@ -37,9 +63,9 @@ func (dist DenseMutableDiscreteDist) Space() DiscreteSpace {
 // Return the probability of a given outcome
 func (dist DenseMutableDiscreteDist) Prob(outcome Outcome) float64 {
 	if dist.totalWeight != 1 {
-		panic(ErrNotNormalized)
+		panic(stats.ErrNotNormalized)
 	} else if int(outcome) < 0 || int(outcome) >= len(dist.weights) {
-		panic(ErrfNotInDomain(outcome))
+		panic(stats.ErrfNotInDomain(int(outcome)))
 	}
 	return dist.weights[int(outcome)]
 }
@@ -47,9 +73,9 @@ func (dist DenseMutableDiscreteDist) Prob(outcome Outcome) float64 {
 // Set the probability of a particular outcome
 func (dist *DenseMutableDiscreteDist) SetProb(outcome Outcome, prob float64) {
 	if int(outcome) < 0 || int(outcome) >= len(dist.weights) {
-		panic(ErrfNotInDomain(outcome))
+		panic(stats.ErrfNotInDomain(int(outcome)))
 	} else if prob < 0 || prob > 1 {
-		panic(ErrfInvalidProb(prob))
+		panic(stats.ErrfInvalidProb(prob))
 	}
 	dist.totalWeight -= dist.weights[outcome]
 	dist.weights[outcome] = prob
@@ -74,7 +100,7 @@ func (dist *DenseMutableDiscreteDist) Reset() {
 // SetWeight() since the last call to Normalize().
 func (dist *DenseMutableDiscreteDist) Normalize() {
 	if dist.totalWeight == 0 {
-		panic(ErrZeroProb)
+		panic(stats.ErrZeroProb)
 	} else if dist.totalWeight != 1 {
 		for i, w := range dist.weights {
 			dist.weights[i] = w / dist.totalWeight

@@ -1,6 +1,7 @@
 package dist
 
 import (
+	"github.com/jesand/stats"
 	"math"
 	"math/rand"
 )
@@ -11,7 +12,7 @@ import (
 func randGamma(alpha, beta, lambda float64) float64 {
 	var gamma float64
 	if alpha <= 0 || beta <= 0 {
-		panic(Errorf("Invalid Gamma distribution parameters: alpha=%f, beta=%f",
+		panic(stats.Errorf("Invalid Gamma distribution parameters: alpha=%f, beta=%f",
 			alpha, beta))
 	}
 	if alpha < 1 {
