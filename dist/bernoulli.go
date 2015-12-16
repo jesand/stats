@@ -17,7 +17,7 @@ type BernoulliDist struct {
 
 // Return a "score" (log density or log mass) for the given values
 func (dist BernoulliDist) Score(vars, params []float64) float64 {
-	return dist.DenseMutableDiscreteDist.Score(vars, []float64{0, params[0]})
+	return dist.DenseMutableDiscreteDist.Score(vars, []float64{1 - params[0], params[0]})
 }
 
 // The number of parameters in the distribution: the weights

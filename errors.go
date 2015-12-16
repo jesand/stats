@@ -5,8 +5,12 @@ import (
 )
 
 const (
-	ErrNotNormalized Error = "The distribution was not normalized properly"
-	ErrZeroProb      Error = "The distribution has zero total probability"
+	ErrNotNormalized  Error = "The distribution was not normalized properly"
+	ErrZeroProb       Error = "The distribution has zero total probability"
+	ErrGraphNotTree   Error = "The factor graph is not a tree"
+	ErrDiscreteOnly   Error = "This process currently only supports discrete random variables"
+	ErrContinuousOnly Error = "This process currently only supports continuous random variables"
+	ErrBernoulliOnly  Error = "This process only supports Bernoulli random variables"
 )
 
 func ErrfNotInDomain(outcome int) Error {
@@ -18,7 +22,7 @@ func ErrfInvalidProb(prob float64) Error {
 }
 
 func ErrfFactorVarNum(numVars, numParams, numAdj int) Error {
-	return Errorf("Factor expected %d variables and %d parameters, but has %d adjacent",
+	return Errorf("Factor expected %d variable(s) and %d parameter(s), but has %d adjacent",
 		numVars, numParams, numAdj)
 }
 

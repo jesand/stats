@@ -3,7 +3,6 @@ package process
 import (
 	"github.com/jesand/stats/variable"
 	. "github.com/smartystreets/goconvey/convey"
-	"math"
 	"testing"
 )
 
@@ -66,9 +65,9 @@ func TestBernoulliProcess(t *testing.T) {
 		for i, factor := range factors {
 			So(factor.Adjacent(), ShouldResemble, []variable.RandomVariable{rvs[i], bias})
 			if rvs[i].Val() == 0 {
-				So(factor.Score(), ShouldEqual, math.Log2(0.3))
+				So(factor.Score(), ShouldAlmostEqual, 0.3)
 			} else {
-				So(factor.Score(), ShouldEqual, math.Log2(0.7))
+				So(factor.Score(), ShouldAlmostEqual, 0.7)
 			}
 		}
 
@@ -76,18 +75,18 @@ func TestBernoulliProcess(t *testing.T) {
 		So(bias.Val(), ShouldEqual, 0.3)
 		for i, factor := range factors {
 			if rvs[i].Val() == 0 {
-				So(factor.Score(), ShouldEqual, math.Log2(0.7))
+				So(factor.Score(), ShouldAlmostEqual, 0.7)
 			} else {
-				So(factor.Score(), ShouldEqual, math.Log2(0.3))
+				So(factor.Score(), ShouldAlmostEqual, 0.3)
 			}
 		}
 
 		bias.Set(0.7)
 		for i, factor := range factors {
 			if rvs[i].Val() == 0 {
-				So(factor.Score(), ShouldEqual, math.Log2(0.3))
+				So(factor.Score(), ShouldAlmostEqual, 0.3)
 			} else {
-				So(factor.Score(), ShouldEqual, math.Log2(0.7))
+				So(factor.Score(), ShouldAlmostEqual, 0.7)
 			}
 		}
 	})

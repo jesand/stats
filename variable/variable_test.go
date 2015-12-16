@@ -33,5 +33,9 @@ func TestDiscreteRV(t *testing.T) {
 		So(rv.Space().Sup(), ShouldEqual, 1)
 		rv.Set(0)
 		So(rv.Val(), ShouldEqual, 0)
+		So(rv.Outcome(), ShouldEqual, 0)
+		rv.SetOutcome(1)
+		So(rv.Val(), ShouldEqual, 1)
+		So(rv.Outcome(), ShouldEqual, 1)
 	})
 }

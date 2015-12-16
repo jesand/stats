@@ -9,7 +9,7 @@ import (
 // Represents a probability distribution
 type Dist interface {
 
-	// Return a "score" (log density or log mass) for the given values
+	// Return a "score" (density or probability) for the given values
 	Score(vars, params []float64) float64
 
 	// The number of random variables the distribution is over

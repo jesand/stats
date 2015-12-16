@@ -60,9 +60,9 @@ func (process IIDProcess) SampleN(n int) (rvs []variable.RandomVariable) {
 func (process IIDProcess) Factors(sequence []variable.RandomVariable) (
 	factors []factor.Factor) {
 
-	for i := range sequence {
+	for _, rv := range sequence {
 		factors = append(factors, factor.NewDistFactor(
-			append(sequence[i:i+1], process.Params...),
+			append([]variable.RandomVariable{rv}, process.Params...),
 			process.Dist,
 		))
 	}

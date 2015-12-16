@@ -2,7 +2,6 @@ package dist
 
 import (
 	"github.com/jesand/stats"
-	"math"
 )
 
 // Make a new instance of DenseMutableDiscreteDist
@@ -34,10 +33,10 @@ type DenseMutableDiscreteDist struct {
 	totalWeight float64
 }
 
-// Return a "score" (log density or log mass) for the given values
+// Return a "score" (density or probability) for the given values
 func (dist DenseMutableDiscreteDist) Score(vars, params []float64) float64 {
 	outcome := dist.space.(DiscreteRealSpace).Outcome(vars[0])
-	return math.Log2(params[int(outcome)])
+	return params[int(outcome)]
 }
 
 // The number of random variables the distribution is over

@@ -18,7 +18,9 @@ type Factor interface {
 	Score() float64
 }
 
-// Create a new factor which scores based on a probability distribution
+// Create a new factor which scores based on a probability distribution.
+// The variables are split into "variables" and "parameters" using the
+// distribution's NumVars() and NumParams() values.
 func NewDistFactor(vars []variable.RandomVariable, distr dist.Dist) *DistFactor {
 	return &DistFactor{
 		Vars: vars,
@@ -58,4 +60,28 @@ func (factor DistFactor) Score() float64 {
 		}
 	}
 	return factor.Dist.Score(vars, params)
+}
+
+// Create a new factor which always returns the same score
+func NewConstFactor(vars []variable.RandomVariable, value float64) *ConstFactor {
+	return &ConstFactor{
+		Vars:  vars,
+		Value: value,
+	}
+}
+
+// A Factor which always returns the same value
+type ConstFactor struct {
+	Vars  []variable.RandomVariable
+	Value float64
+}
+
+// The adjacent random variables
+func (factor ConstFactor) Adjacent() []variable.RandomVariable {
+	return factor.Vars
+}
+
+// The log probability of the variables given the parameters
+func (factor ConstFactor) Score() float64 {
+	return factor.Value
 }

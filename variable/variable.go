@@ -12,6 +12,9 @@ type RandomVariable interface {
 
 	// Set the variable's current value
 	Set(val float64)
+
+	// Ask whether the variable has the same domain and value as another variable
+	Equals(other RandomVariable) bool
 }
 
 // Create a new continuous random variable
@@ -36,6 +39,14 @@ func (rv *ContinuousRV) Set(val float64) {
 	rv.val = val
 }
 
+func (rv ContinuousRV) Equals(other RandomVariable) bool {
+	crv, ok := other.(*ContinuousRV)
+	if !ok {
+		return false
+	}
+	return rv.Space().Equals(crv.Space()) && rv.Val() == crv.Val()
+}
+
 func (rv ContinuousRV) Space() dist.RealSpace {
 	return rv.space
 }
@@ -58,12 +69,24 @@ func (rv DiscreteRV) Val() float64 {
 	return rv.space.F64Value(rv.val)
 }
 
+func (rv DiscreteRV) Outcome() dist.Outcome {
+	return rv.val
+}
+
 func (rv *DiscreteRV) Set(val float64) {
 	rv.val = rv.space.Outcome(val)
 }
 
-func (rv DiscreteRV) SetOutcome(val dist.Outcome) {
+func (rv *DiscreteRV) SetOutcome(val dist.Outcome) {
 	rv.val = val
+}
+
+func (rv DiscreteRV) Equals(other RandomVariable) bool {
+	drv, ok := other.(*DiscreteRV)
+	if !ok {
+		return false
+	}
+	return rv.Space().Equals(drv.Space()) && rv.Val() == drv.Val()
 }
 
 func (rv DiscreteRV) Space() dist.DiscreteRealSpace {

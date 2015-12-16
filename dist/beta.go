@@ -100,3 +100,9 @@ func (dist Beta) Sample() float64 {
 	)
 	return x / (x + y)
 }
+
+// Return the Bayesian posterior using this Beta as a prior distribution, and
+// having observed `pos` positive and `neg` negative outcomes.
+func (dist Beta) Posterior(pos, neg float64) *Beta {
+	return NewBetaDist(dist.Alpha+pos, dist.Beta+neg)
+}
