@@ -13,7 +13,7 @@ func TestProdValueSampler(t *testing.T) {
 	Convey("Given a ProdValueSampler with a ConstFactor", t, func() {
 		var (
 			rv      = process.NewBernoulliProcess(0.5).Sample().(*variable.DiscreteRV)
-			space   = rv.Space().(dist.BooleanSpace)
+			space   = dist.BooleanSpace
 			factors = []factor.Factor{
 				factor.NewConstFactor([]variable.RandomVariable{rv}, 20),
 			}
@@ -40,7 +40,7 @@ func TestProdValueSampler(t *testing.T) {
 			proc3   = process.NewBernoulliProcess(0.5)
 			rv      = proc1.Sample().(*variable.DiscreteRV)
 			rvs     = []variable.RandomVariable{rv}
-			space   = rv.Space().(dist.BooleanSpace)
+			space   = dist.BooleanSpace
 			factors = append(
 				proc1.Factors(rvs),
 				append(proc2.Factors(rvs),

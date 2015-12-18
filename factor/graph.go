@@ -3,6 +3,7 @@ package factor
 import (
 	"github.com/jesand/stats"
 	"github.com/jesand/stats/variable"
+	"math"
 )
 
 // Create a new factor graph
@@ -43,6 +44,13 @@ func (graph *FactorGraph) AddFactor(factor Factor) {
 	}
 }
 
+// Add multiple factors to the graph
+func (graph *FactorGraph) AddFactors(factors []Factor) {
+	for _, factor := range factors {
+		graph.AddFactor(factor)
+	}
+}
+
 // Get variables adjacent to a factor
 func (graph FactorGraph) AdjToFactor(factor Factor) []variable.RandomVariable {
 	return factor.Adjacent()
@@ -55,4 +63,22 @@ func (graph FactorGraph) AdjToVariable(v variable.RandomVariable) []Factor {
 	} else {
 		return graph.Variables[idx].Factors
 	}
+}
+
+// Get the score for a particular variable
+func (graph FactorGraph) ScoreVar(v variable.RandomVariable) float64 {
+	var score float64
+	for _, factor := range graph.AdjToVariable(v) {
+		score += math.Log(factor.Score())
+	}
+	return score
+}
+
+// Get the score for the entire factor graph
+func (graph FactorGraph) Score() float64 {
+	var score float64
+	for _, factor := range graph.Factors {
+		score += math.Log(factor.Score())
+	}
+	return score
 }

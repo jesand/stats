@@ -3,7 +3,6 @@ package dist
 import (
 	"github.com/ematvey/gostat"
 	"github.com/jesand/stats"
-	"math"
 )
 
 // Produce a new Beta distribution
@@ -11,7 +10,7 @@ func NewBetaDist(alpha, beta float64) *Beta {
 	dist := &Beta{
 		Alpha: alpha,
 		Beta:  beta,
-		space: NewUnitIntervalSpace(),
+		space: UnitIntervalSpace,
 	}
 	dist.DefContinuousDistSampleN.dist = dist
 	dist.DefContinuousDistProb.dist = dist
@@ -38,11 +37,11 @@ func (dist Beta) Space() RealSpace {
 	return dist.space
 }
 
-// Return a "score" (log density or log mass) for the given values
+// Return a "score" (density or probability) for the given values
 func (dist Beta) Score(vars, params []float64) float64 {
 	alpha, beta := dist.Alpha, dist.Beta
 	dist.Alpha, dist.Beta = params[0], params[1]
-	score := math.Log2(dist.PDF(vars[0]))
+	score := dist.PDF(vars[0])
 	dist.Alpha, dist.Beta = alpha, beta
 	return score
 }
@@ -105,4 +104,24 @@ func (dist Beta) Sample() float64 {
 // having observed `pos` positive and `neg` negative outcomes.
 func (dist Beta) Posterior(pos, neg float64) *Beta {
 	return NewBetaDist(dist.Alpha+pos, dist.Beta+neg)
+}
+
+// Return the Beta which maximizes the probability of emitting the given sequence,
+// based on a method of moments estimation
+func (dist Beta) MaximizeByMoM(vals []float64) *Beta {
+	var mean, variance float64
+	for _, v := range vals {
+		mean += v
+	}
+	mean /= float64(len(vals))
+	for _, v := range vals {
+		diff := mean - v
+		variance += diff * diff
+	}
+	variance /= float64(len(vals)) - 1
+
+	alpha := mean * (((mean * (1 - mean)) / variance) - 1)
+	beta := (1 - mean) * (((mean * (1 - mean)) / variance) - 1)
+
+	return NewBetaDist(alpha, beta)
 }

@@ -12,7 +12,7 @@ func TestContinuousRV(t *testing.T) {
 	})
 
 	Convey("Test ContinuousRV", t, func() {
-		rv := NewContinuousRV(0.5, dist.NewUnitIntervalSpace())
+		rv := NewContinuousRV(0.5, dist.UnitIntervalSpace)
 		So(rv.Val(), ShouldEqual, 0.5)
 		So(rv.Space().Inf(), ShouldEqual, 0)
 		So(rv.Space().Sup(), ShouldEqual, 1)
@@ -27,7 +27,7 @@ func TestDiscreteRV(t *testing.T) {
 	})
 
 	Convey("Test DiscreteRV", t, func() {
-		rv := NewDiscreteRV(1, dist.BooleanSpace{})
+		rv := NewDiscreteRV(1, dist.BooleanSpace)
 		So(rv.Val(), ShouldEqual, 1)
 		So(rv.Space().Inf(), ShouldEqual, 0)
 		So(rv.Space().Sup(), ShouldEqual, 1)

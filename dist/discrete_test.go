@@ -7,7 +7,7 @@ import (
 
 func TestDenseMutableDiscreteDist(t *testing.T) {
 	Convey("Test DenseMutableDiscreteDist interfaces", t, func() {
-		dist := NewDenseMutableDiscreteDist(BooleanSpace{})
+		dist := NewDenseMutableDiscreteDist(BooleanSpace)
 		So(dist, ShouldImplement, (*MutableDiscreteDist)(nil))
 	})
 }

@@ -1,5 +1,9 @@
 package dist
 
+import (
+	"math"
+)
+
 // An ID for a particular outcome in a space
 type Outcome int
 
@@ -24,6 +28,32 @@ type RealLikeSpace interface {
 type RealSpace interface {
 	Space
 	RealLikeSpace
+}
+
+// The space of reals greater than zero
+type positiveRealSpace struct{}
+
+// The canonical instance of positiveRealSpace
+var PositiveRealSpace positiveRealSpace
+
+// The infimum (min) value in the space, or negative infinity
+func (sp positiveRealSpace) Inf() float64 {
+	return 0
+}
+
+// The supremum (max) value in the space, or positive infinity
+func (sp positiveRealSpace) Sup() float64 {
+	return math.Inf(+1)
+}
+
+// Ask whether the space is the same as some other space
+func (sp positiveRealSpace) Equals(other Space) bool {
+	if _, ok := other.(*positiveRealSpace); ok {
+		return true
+	} else if _, ok := other.(positiveRealSpace); ok {
+		return true
+	}
+	return false
 }
 
 // Create a new RealIntervalSpace with the specified bounds
@@ -53,15 +83,18 @@ func (space RealIntervalSpace) Sup() float64 {
 func (sp RealIntervalSpace) Equals(other Space) bool {
 	ris, ok := other.(*RealIntervalSpace)
 	if !ok {
-		return false
+		ri, ok := other.(RealIntervalSpace)
+		if !ok {
+			return false
+		} else {
+			ris = &ri
+		}
 	}
 	return sp.Min == ris.Min && sp.Max == ris.Max
 }
 
-// The unit interval
-func NewUnitIntervalSpace() RealIntervalSpace {
-	return RealIntervalSpace{Min: 0, Max: 1}
-}
+// The canonical unit interval space
+var UnitIntervalSpace = RealIntervalSpace{Min: 0, Max: 1}
 
 // A sample space over a discrete set
 type DiscreteSpace interface {
@@ -87,31 +120,38 @@ type DiscreteRealSpace interface {
 }
 
 // A sample space over boolean outcomes
-type BooleanSpace struct{}
+type booleanSpace struct{}
+
+// The canonical instance of booleanSpace
+var BooleanSpace booleanSpace
 
 // The infimum (min) value in the space, or negative infinity
-func (sp BooleanSpace) Inf() float64 {
+func (sp booleanSpace) Inf() float64 {
 	return 0
 }
 
 // The supremum (max) value in the space, or positive infinity
-func (sp BooleanSpace) Sup() float64 {
+func (sp booleanSpace) Sup() float64 {
 	return 1
 }
 
 // Ask whether the space is the same as some other space
-func (sp BooleanSpace) Equals(other Space) bool {
-	_, ok := other.(*BooleanSpace)
-	return ok
+func (sp booleanSpace) Equals(other Space) bool {
+	if _, ok := other.(*booleanSpace); ok {
+		return true
+	} else if _, ok := other.(booleanSpace); ok {
+		return true
+	}
+	return false
 }
 
 // Return the cardinality of the space
-func (sp BooleanSpace) Size() int {
+func (sp booleanSpace) Size() int {
 	return 2
 }
 
 // The real value of an outcome
-func (sp BooleanSpace) F64Value(outcome Outcome) float64 {
+func (sp booleanSpace) F64Value(outcome Outcome) float64 {
 	if outcome == 0 {
 		return 0.0
 	} else {
@@ -120,7 +160,7 @@ func (sp BooleanSpace) F64Value(outcome Outcome) float64 {
 }
 
 // The outcome corresponding to a real value
-func (sp BooleanSpace) Outcome(value float64) Outcome {
+func (sp booleanSpace) Outcome(value float64) Outcome {
 	if value == 0.0 {
 		return 0
 	} else {
@@ -129,12 +169,12 @@ func (sp BooleanSpace) Outcome(value float64) Outcome {
 }
 
 // Return the specified outcome as a boolean
-func (sp BooleanSpace) BoolValue(outcome Outcome) bool {
+func (sp booleanSpace) BoolValue(outcome Outcome) bool {
 	return outcome != 0
 }
 
 // Return the outcome corresponding to the provided boolean value
-func (sp BooleanSpace) BoolOutcome(value bool) Outcome {
+func (sp booleanSpace) BoolOutcome(value bool) Outcome {
 	if value {
 		return 1
 	} else {

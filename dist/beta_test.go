@@ -23,7 +23,7 @@ func TestBeta(t *testing.T) {
 		So(dist.NumVars(), ShouldEqual, 1)
 		So(dist.NumParams(), ShouldEqual, 2)
 		So(dist.PDF(0.1), ShouldAlmostEqual, 0.789602001365603)
-		So(dist.Score([]float64{0.1}, []float64{0.5, 0.5}), ShouldAlmostEqual, 0.0854694647)
+		So(dist.Score([]float64{0.1}, []float64{0.5, 0.5}), ShouldAlmostEqual, 1.061032953945969)
 		So(dist.PDF(0.1), ShouldAlmostEqual, 0.789602001365603)
 		dist.SetParams([]float64{0.5, 0.5})
 		So(dist.PDF(0.1), ShouldAlmostEqual, 1.061032953945969)

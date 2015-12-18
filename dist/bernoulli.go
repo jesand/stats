@@ -3,7 +3,7 @@ package dist
 // Create a new Bernoulli distribution
 func NewBernoulliDist(bias float64) *BernoulliDist {
 	dist := &BernoulliDist{
-		DenseMutableDiscreteDist: NewDenseMutableDiscreteDist(BooleanSpace{}),
+		DenseMutableDiscreteDist: NewDenseMutableDiscreteDist(BooleanSpace),
 	}
 	dist.SetBias(bias)
 	return dist
@@ -31,8 +31,8 @@ func (dist *BernoulliDist) SetParams(vals []float64) {
 }
 
 // Return the space as a BooleanSpace
-func (dist *BernoulliDist) BSpace() BooleanSpace {
-	return dist.space.(BooleanSpace)
+func (dist *BernoulliDist) BSpace() booleanSpace {
+	return dist.space.(booleanSpace)
 }
 
 // Set the bias of the distribution

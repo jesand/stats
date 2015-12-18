@@ -11,7 +11,7 @@ func NewBernoulliProcess(bias float64) *BernoulliProcess {
 	if bias < 0 || bias > 1 {
 		panic(stats.ErrfInvalidProb(bias))
 	}
-	biasRV := variable.NewContinuousRV(bias, dist.NewUnitIntervalSpace())
+	biasRV := variable.NewContinuousRV(bias, dist.UnitIntervalSpace)
 	return &BernoulliProcess{
 		IIDProcess: NewIIDProcess(
 			[]variable.RandomVariable{biasRV},

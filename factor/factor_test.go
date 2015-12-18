@@ -14,11 +14,11 @@ func TestDistFactor(t *testing.T) {
 	})
 
 	Convey("Test DistFactor", t, func() {
-		val := variable.NewContinuousRV(0.1, dist.NewUnitIntervalSpace())
+		val := variable.NewContinuousRV(0.1, dist.UnitIntervalSpace)
 		alpha := variable.NewContinuousRV(0.5, dist.NewRealIntervalSpace(0, math.Inf(+1)))
 		beta := variable.NewContinuousRV(0.5, dist.NewRealIntervalSpace(0, math.Inf(+1)))
 		factor := NewDistFactor([]variable.RandomVariable{val, alpha, beta}, dist.NewBetaDist(0, 0))
 		So(factor.Adjacent(), ShouldResemble, []variable.RandomVariable{val, alpha, beta})
-		So(factor.Score(), ShouldAlmostEqual, 0.0854694647)
+		So(factor.Score(), ShouldAlmostEqual, 1.061032953945969)
 	})
 }
