@@ -1,6 +1,7 @@
 package dist
 
 import (
+	"github.com/jesand/stats"
 	"math"
 )
 
@@ -180,4 +181,54 @@ func (sp booleanSpace) BoolOutcome(value bool) Outcome {
 	} else {
 		return 0
 	}
+}
+
+// A discrete space over arbitrary objects
+type DiscreteObjectSpace struct {
+
+	// The objects which the space is over
+	Objects []interface{}
+}
+
+// Ask whether the space is the same as some other space
+func (sp DiscreteObjectSpace) Equals(other Space) bool {
+	var sp2 *DiscreteObjectSpace
+	if s, ok := other.(*DiscreteObjectSpace); ok {
+		sp2 = s
+	} else if s, ok := other.(DiscreteObjectSpace); ok {
+		sp2 = &s
+	} else {
+		return false
+	}
+	if len(sp.Objects) != len(sp2.Objects) {
+		return false
+	}
+	for i, v := range sp.Objects {
+		if v != sp2.Objects[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// Returns the number of outcomes in the space if finite, and
+// returns -1 if infinite.
+func (sp DiscreteObjectSpace) Size() int {
+	return len(sp.Objects)
+}
+
+func (sp DiscreteObjectSpace) Outcome(val interface{}) Outcome {
+	for i, v := range sp.Objects {
+		if v == val {
+			return Outcome(i)
+		}
+	}
+	panic(stats.ErrfValNotInDomain(val))
+}
+
+func (sp DiscreteObjectSpace) Value(outcome Outcome) interface{} {
+	if int(outcome) < 0 || int(outcome) >= len(sp.Objects) {
+		panic(stats.ErrfNotInDomain(int(outcome)))
+	}
+	return sp.Objects[int(outcome)]
 }

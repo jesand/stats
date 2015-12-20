@@ -47,3 +47,12 @@ func TestBooleanSpace(t *testing.T) {
 		So(sp.BoolValue(2), ShouldEqual, true)
 	})
 }
+
+func TestDiscreteObjectSpace(t *testing.T) {
+	var objects = []interface{}{0, 1, 2, 3, 4, 5}
+	var sp = DiscreteObjectSpace{Objects: objects}
+	Convey("Test DiscreteObjectSpace interfaces", t, func() {
+		So(sp, ShouldImplement, (*Space)(nil))
+		So(sp, ShouldImplement, (*DiscreteSpace)(nil))
+	})
+}

@@ -17,6 +17,10 @@ func ErrfNotInDomain(outcome int) Error {
 	return Errorf("Outcome %d not in the sample space", outcome)
 }
 
+func ErrfValNotInDomain(value interface{}) Error {
+	return Errorf("Value %v not in the sample space", value)
+}
+
 func ErrfInvalidProb(prob float64) Error {
 	return Errorf("Invalid probability %f", prob)
 }
