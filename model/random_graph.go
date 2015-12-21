@@ -43,7 +43,7 @@ func RandomBipartiteGraph(leftDegrees, rightDegrees []int) (edges [][2]int, err 
 		for l, ld := range leftDegrees {
 			for r, rd := range rightDegrees {
 				idx := l*len(rightDegrees) + r
-				if !hasEdge[idx] {
+				if l != r && !hasEdge[idx] {
 					w := float64(leftNeeded[l]*rightNeeded[r]) *
 						(1 - float64(ld*rd)/float64(4*totalLeft))
 					totalWeight += w
@@ -62,7 +62,7 @@ func RandomBipartiteGraph(leftDegrees, rightDegrees []int) (edges [][2]int, err 
 		for l, ld := range leftDegrees {
 			for r, rd := range rightDegrees {
 				idx := l*len(rightDegrees) + r
-				if !hasEdge[idx] {
+				if l != r && !hasEdge[idx] {
 					w := float64(leftNeeded[l]*rightNeeded[r]) *
 						(1 - float64(ld*rd)/float64(4*totalLeft))
 					remaining -= w
