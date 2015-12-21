@@ -8,9 +8,9 @@ import (
 func Test_RandomBipartiteGraph(t *testing.T) {
 	Convey("RandomBipartiteGraph() handles invalid input", t, func() {
 		var err error
-		_, err = RandomBipartiteGraph(nil, nil)
+		_, err = RandomBipartiteGraph(nil, nil, 1)
 		So(err.Error(), ShouldEqual, "Total node degree is zero")
-		_, err = RandomBipartiteGraph([]int{1, 2, 3}, []int{3, 2, 2})
+		_, err = RandomBipartiteGraph([]int{1, 2, 3}, []int{3, 2, 2}, 1)
 		So(err.Error(), ShouldEqual, "Total left degree 6 != total right degree 7")
 	})
 	Convey("RandomBipartiteGraph() returns a correct graph", t, func() {
@@ -18,7 +18,7 @@ func Test_RandomBipartiteGraph(t *testing.T) {
 			leftDegrees  = []int{2, 4, 6}
 			rightDegrees = []int{2, 2, 2, 2, 2, 2}
 		)
-		edges, err := RandomBipartiteGraph(leftDegrees, rightDegrees)
+		edges, err := RandomBipartiteGraph(leftDegrees, rightDegrees, 1)
 		So(err, ShouldBeNil)
 		So(len(edges), ShouldEqual, 12)
 		for _, edge := range edges {

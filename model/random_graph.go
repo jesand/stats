@@ -14,14 +14,12 @@ import (
 //
 // If successful, returns a list of edges. Each edge contains an index from the
 // left nodes and an index from the right nodes.
-func RandomBipartiteGraph(leftDegrees, rightDegrees []int) (edges [][2]int, err error) {
+func RandomBipartiteGraph(leftDegrees, rightDegrees []int, maxTries int) (edges [][2]int, err error) {
 	var (
 		leftNeeded            = make([]int, len(leftDegrees))
 		rightNeeded           = make([]int, len(rightDegrees))
 		totalLeft, totalRight int
 	)
-	copy(leftNeeded[:], leftDegrees[:])
-	copy(rightNeeded[:], rightDegrees[:])
 	for _, d := range leftDegrees {
 		totalLeft += d
 	}
@@ -34,50 +32,59 @@ func RandomBipartiteGraph(leftDegrees, rightDegrees []int) (edges [][2]int, err 
 		return nil, fmt.Errorf("Total left degree %d != total right degree %d",
 			totalLeft, totalRight)
 	}
-	var hasEdge = make([]bool, len(leftNeeded)*len(rightNeeded))
-	edges = make([][2]int, totalLeft)
-	for edgeNum := 0; edgeNum < totalLeft; edgeNum++ {
+	for try := 0; try < maxTries && len(edges) < totalLeft; try++ {
+		edges = nil
+		var hasEdge = make([]bool, len(leftNeeded)*len(rightNeeded))
+		copy(leftNeeded[:], leftDegrees[:])
+		copy(rightNeeded[:], rightDegrees[:])
 
-		// Find the total probability of unselected edges
-		var totalWeight float64
-		for l, ld := range leftDegrees {
-			for r, rd := range rightDegrees {
-				idx := l*len(rightDegrees) + r
-				if l != r && !hasEdge[idx] {
-					w := float64(leftNeeded[l]*rightNeeded[r]) *
-						(1 - float64(ld*rd)/float64(4*totalLeft))
-					totalWeight += w
-				}
-			}
-		}
-		if totalWeight == 0 {
-			return nil, fmt.Errorf("Could not find a random graph of the given degree")
-		}
+		for edgeNum := 0; edgeNum < totalLeft; edgeNum++ {
 
-		// Select an edge
-		var (
-			remaining = rand.Float64() * totalWeight
-			found     = false
-		)
-		for l, ld := range leftDegrees {
-			for r, rd := range rightDegrees {
-				idx := l*len(rightDegrees) + r
-				if l != r && !hasEdge[idx] {
-					w := float64(leftNeeded[l]*rightNeeded[r]) *
-						(1 - float64(ld*rd)/float64(4*totalLeft))
-					remaining -= w
-					if remaining <= 0 {
-						edges[edgeNum] = [2]int{l, r}
-						leftNeeded[l]--
-						rightNeeded[r]--
-						hasEdge[idx] = true
-						found = true
-						break
+			// Find the total probability of unselected edges
+			var totalWeight float64
+			for l, ld := range leftDegrees {
+				for r, rd := range rightDegrees {
+					idx := l*len(rightDegrees) + r
+					if !hasEdge[idx] {
+						w := float64(leftNeeded[l]*rightNeeded[r]) *
+							(1 - float64(ld*rd)/float64(4*totalLeft))
+						totalWeight += w
 					}
 				}
 			}
-			if found {
-				break
+			if totalWeight == 0 {
+				if try == maxTries-1 {
+					return edges, fmt.Errorf("Could not find a random graph of the given degree; missing %d edge(s)", totalLeft-len(edges))
+				} else {
+					break
+				}
+			}
+
+			// Select an edge
+			var (
+				remaining = rand.Float64() * totalWeight
+				found     = false
+			)
+			for l, ld := range leftDegrees {
+				for r, rd := range rightDegrees {
+					idx := l*len(rightDegrees) + r
+					if !hasEdge[idx] {
+						w := float64(leftNeeded[l]*rightNeeded[r]) *
+							(1 - float64(ld*rd)/float64(4*totalLeft))
+						remaining -= w
+						if remaining <= 0 {
+							edges = append(edges, [2]int{l, r})
+							leftNeeded[l]--
+							rightNeeded[r]--
+							hasEdge[idx] = true
+							found = true
+							break
+						}
+					}
+				}
+				if found {
+					break
+				}
 			}
 		}
 	}
