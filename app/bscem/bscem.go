@@ -140,6 +140,7 @@ func main() {
 
 	// Prepare a model for the data
 	fmt.Println("Building model...")
+	const initNoise = 1e-3
 	var (
 		mod1           = model.NewMultipleBSCModel(1, 1)
 		mod2           = model.NewMultipleBSCPairModel(1, 1, 1, 1)
@@ -171,12 +172,12 @@ func main() {
 		)
 		if pairModel {
 			if !mod2.HasChannel(question, worker) {
-				mod2.AddChannel(question, 1e-6, worker, 1e-6)
+				mod2.AddChannel(question, initNoise, worker, initNoise)
 			}
 			mod2.AddObservation(question, question, worker, isLt)
 		} else {
 			if !mod1.HasChannel(worker) {
-				mod1.AddChannel(worker, 1e-6)
+				mod1.AddChannel(worker, initNoise)
 			}
 			mod1.AddObservation(question, worker, isLt)
 		}

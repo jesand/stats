@@ -94,6 +94,9 @@ func (sp RealIntervalSpace) Equals(other Space) bool {
 	return sp.Min == ris.Min && sp.Max == ris.Max
 }
 
+// The space of all reals
+var AllRealSpace = RealIntervalSpace{Min: math.Inf(-1), Max: math.Inf(+1)}
+
 // The canonical unit interval space
 var UnitIntervalSpace = RealIntervalSpace{Min: 0, Max: 1}
 

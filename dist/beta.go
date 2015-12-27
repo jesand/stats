@@ -3,6 +3,7 @@ package dist
 import (
 	"github.com/ematvey/gostat"
 	"github.com/jesand/stats"
+	"math"
 )
 
 // Produce a new Beta distribution
@@ -39,11 +40,7 @@ func (dist Beta) Space() RealSpace {
 
 // Return a "score" (density or probability) for the given values
 func (dist Beta) Score(vars, params []float64) float64 {
-	alpha, beta := dist.Alpha, dist.Beta
-	dist.Alpha, dist.Beta = params[0], params[1]
-	score := dist.PDF(vars[0])
-	dist.Alpha, dist.Beta = alpha, beta
-	return score
+	return Beta{Alpha: params[0], Beta: params[1]}.PDF(vars[0])
 }
 
 // The number of random variables the distribution is over
@@ -63,7 +60,18 @@ func (dist *Beta) SetParams(vals []float64) {
 
 // Return the density at a given value
 func (dist Beta) PDF(val float64) float64 {
-	return stat.Beta_PDF_At(dist.Alpha, dist.Beta, val)
+	pdf := stat.Beta_PDF_At(dist.Alpha, dist.Beta, val)
+
+	// Approximate difficult-to-calculate scores with a Normal distribution.
+	// This approximation works well when the parameters are large.
+	if dist.Alpha > 100 && dist.Beta > 100 &&
+		(math.IsNaN(pdf) || math.IsInf(pdf, +1) || math.IsInf(pdf, -1)) {
+		return Normal{
+			Mu:    dist.Mean(),
+			Sigma: math.Sqrt(dist.Variance()),
+		}.PDF(val)
+	}
+	return pdf
 }
 
 // The value of the CDF: Pr(X <= val) for random variable X over this space
@@ -106,22 +114,16 @@ func (dist Beta) Posterior(pos, neg float64) *Beta {
 	return NewBetaDist(dist.Alpha+pos, dist.Beta+neg)
 }
 
-// Return the Beta which maximizes the probability of emitting the given sequence,
-// based on a method of moments estimation
+// Return the Beta which maximizes the probability of emitting the given
+// sequence, based on a method of moments estimation.
+// See: http://www.itl.nist.gov/div898/handbook/eda/section3/eda366h.htm
 func (dist Beta) MaximizeByMoM(vals []float64) *Beta {
-	var mean, variance float64
-	for _, v := range vals {
-		mean += v
-	}
-	mean /= float64(len(vals))
-	for _, v := range vals {
-		diff := mean - v
-		variance += diff * diff
-	}
-	variance /= float64(len(vals)) - 1
-
-	alpha := mean * (((mean * (1 - mean)) / variance) - 1)
-	beta := (1 - mean) * (((mean * (1 - mean)) / variance) - 1)
-
+	var (
+		mean     = Mean(vals)
+		variance = Variance(vals)
+		scale    = ((mean * (1 - mean)) / variance) - 1
+		alpha    = mean * scale
+		beta     = (1 - mean) * scale
+	)
 	return NewBetaDist(alpha, beta)
 }

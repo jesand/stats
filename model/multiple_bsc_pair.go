@@ -166,70 +166,27 @@ func (model *MultipleBSCPairModel) EM(maxRounds int, tolerance float64,
 		// Update the first layer of noise rates
 		var rates1 []float64
 		for _, noiseRate := range model.Noise1Rates {
-			var total, flips, other float64
+			var count, sum float64
 			for _, factor := range model.FactorGraph.AdjToVariable(noiseRate) {
 				if ch, ok := factor.(*bsc.BSCPairFactor); ok {
 					n2 := ch.NoiseRate2.Val()
-					other += n2
-					total++
+					count++
 					if ch.OutputMatchesInput() {
-						// v := (n2 - 1) / (2*n2 - 1)
-						// total += v
+						sum += n2
 					} else {
-						flips++
-						// v := n2 / (2*n2 - 1)
-						// flips += v
-						// total += v
+						sum += 1 - n2
 					}
 				}
 			}
-			j := flips / total
-			m := other / total
-			n := (j + m - 1) / (2*m - 1)
-			noiseRate.Set((n + model.Noise1Alpha.Val()) /
-				((1 - n) + model.Noise1Alpha.Val() + model.Noise1Beta.Val()))
-			// noiseRate.Set((flips + model.Noise1Alpha.Val()) /
-			// 	(total + model.Noise1Alpha.Val() + model.Noise1Beta.Val()))
+			noiseRate.Set((sum + model.Noise1Alpha.Val()) /
+				(count + model.Noise1Alpha.Val() + model.Noise1Beta.Val()))
 			rates1 = append(rates1, noiseRate.Val())
 		}
 		if callback != nil {
 			callback(model, round, "noise1")
 		}
 
-		// Update the second layer of noise rates
-		var rates2 []float64
-		for _, noiseRate := range model.Noise2Rates {
-			var total, flips, other float64
-			for _, factor := range model.FactorGraph.AdjToVariable(noiseRate) {
-				if ch, ok := factor.(*bsc.BSCPairFactor); ok {
-					n2 := ch.NoiseRate1.Val()
-					other += n2
-					total++
-					if ch.OutputMatchesInput() {
-						// v := (n2 - 1) / (2*n2 - 1)
-						// total += v
-					} else {
-						flips++
-						// v := n2 / (2*n2 - 1)
-						// flips += v
-						// total += v
-					}
-				}
-			}
-			j := flips / total
-			m := other / total
-			n := (j + m - 1) / (2*m - 1)
-			noiseRate.Set((n + model.Noise2Alpha.Val()) /
-				((1 - n) + model.Noise2Alpha.Val() + model.Noise2Beta.Val()))
-			// noiseRate.Set((flips + model.Noise1Alpha.Val()) /
-			// 	(total + model.Noise1Alpha.Val() + model.Noise1Beta.Val()))
-			rates2 = append(rates2, noiseRate.Val())
-		}
-		if callback != nil {
-			callback(model, round, "noise2")
-		}
-
-		// Update Beta priors
+		// Update Beta prior for noise 1
 		if model.UpdateBeta1 {
 			model.Noise1Dist = model.Noise1Dist.MaximizeByMoM(rates1)
 			model.Noise1Alpha.Set(model.Noise1Dist.Alpha)
@@ -238,6 +195,31 @@ func (model *MultipleBSCPairModel) EM(maxRounds int, tolerance float64,
 				callback(model, round, "beta1")
 			}
 		}
+
+		// Update the second layer of noise rates
+		var rates2 []float64
+		for _, noiseRate := range model.Noise2Rates {
+			var count, sum float64
+			for _, factor := range model.FactorGraph.AdjToVariable(noiseRate) {
+				if ch, ok := factor.(*bsc.BSCPairFactor); ok {
+					count++
+					n1 := ch.NoiseRate1.Val()
+					if ch.OutputMatchesInput() {
+						sum += n1
+					} else {
+						sum += 1 - n1
+					}
+				}
+			}
+			noiseRate.Set((sum + model.Noise2Alpha.Val()) /
+				(count + model.Noise2Alpha.Val() + model.Noise2Beta.Val()))
+			rates2 = append(rates2, noiseRate.Val())
+		}
+		if callback != nil {
+			callback(model, round, "noise2")
+		}
+
+		// Update Beta prior for noise 2
 		if model.UpdateBeta2 {
 			model.Noise2Dist = model.Noise2Dist.MaximizeByMoM(rates2)
 			model.Noise2Alpha.Set(model.Noise2Dist.Alpha)
