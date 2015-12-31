@@ -39,6 +39,9 @@ type MultipleBSCModel struct {
 	// The variables sent over the noisy channels
 	Inputs map[string]*variable.DiscreteRV
 
+	// The posterior probability that each latent input variable is true
+	InputScores map[string]float64
+
 	// Whether to use soft or hard assignments to inputs during inference
 	SoftInputs bool
 
@@ -180,7 +183,8 @@ func (model *MultipleBSCModel) EM(maxRounds int, tolerance float64,
 		lastRound, thisRound = thisRound, model.Score()
 	}
 
-	for _, input := range model.Inputs {
+	model.InputScores = make(map[string]float64)
+	for name, input := range model.Inputs {
 		input.Set(0)
 		ifFalse := model.FactorGraph.ScoreVar(input)
 		input.Set(1)
@@ -188,6 +192,7 @@ func (model *MultipleBSCModel) EM(maxRounds int, tolerance float64,
 		if ifFalse > ifTrue {
 			input.Set(0)
 		}
+		model.InputScores[name] = ifTrue / (ifTrue + ifFalse)
 	}
 	if callback != nil {
 		callback(model, 0, "Final")
