@@ -14,17 +14,18 @@ func NewMultipleBSCPairModel(alpha1, beta1, alpha2, beta2 float64) *MultipleBSCP
 		Noise1Beta:  variable.NewContinuousRV(beta1, dist.PositiveRealSpace),
 		Noise1Dist:  dist.NewBetaDist(alpha1, beta1),
 		Noise1Rates: make(map[string]*variable.ContinuousRV),
-		UpdateBeta1: true,
+		UpdateBeta1: false,
 
 		Noise2Alpha: variable.NewContinuousRV(alpha2, dist.PositiveRealSpace),
 		Noise2Beta:  variable.NewContinuousRV(beta2, dist.PositiveRealSpace),
 		Noise2Dist:  dist.NewBetaDist(alpha2, beta2),
 		Noise2Rates: make(map[string]*variable.ContinuousRV),
-		UpdateBeta2: true,
+		UpdateBeta2: false,
 
 		Channels:    make(map[string]map[string]*bsc.BSCPair),
 		Inputs:      make(map[string]*variable.DiscreteRV),
 		FactorGraph: factor.NewFactorGraph(),
+		SoftInputs:  true,
 	}
 }
 
@@ -49,6 +50,9 @@ type MultipleBSCPairModel struct {
 	// The variables sent over the noisy channels
 	Inputs map[string]*variable.DiscreteRV
 
+	// Whether to use soft or hard assignments to inputs during inference
+	SoftInputs bool
+
 	// The noisy channels
 	Channels map[string]map[string]*bsc.BSCPair
 
@@ -72,9 +76,9 @@ func (model *MultipleBSCPairModel) AddChannel(name1 string, noise1 float64,
 		if noise1 != 0 {
 			ch.NoiseRate1.Set(noise1)
 		}
-		model.FactorGraph.AddFactor(factor.NewDistFactor(
-			[]variable.RandomVariable{ch.NoiseRate1, model.Noise1Alpha,
-				model.Noise1Beta}, model.Noise1Dist))
+		// model.FactorGraph.AddFactor(factor.NewDistFactor(
+		// 	[]variable.RandomVariable{ch.NoiseRate1, model.Noise1Alpha,
+		// 		model.Noise1Beta}, model.Noise1Dist))
 	}
 
 	n2, ok := model.Noise2Rates[name2]
@@ -85,9 +89,9 @@ func (model *MultipleBSCPairModel) AddChannel(name1 string, noise1 float64,
 		if noise2 != 0 {
 			ch.NoiseRate2.Set(noise2)
 		}
-		model.FactorGraph.AddFactor(factor.NewDistFactor(
-			[]variable.RandomVariable{ch.NoiseRate2, model.Noise2Alpha,
-				model.Noise2Beta}, model.Noise2Dist))
+		// model.FactorGraph.AddFactor(factor.NewDistFactor(
+		// 	[]variable.RandomVariable{ch.NoiseRate2, model.Noise2Alpha,
+		// 		model.Noise2Beta}, model.Noise2Dist))
 	}
 
 	if _, ok := model.Channels[name1]; !ok {
@@ -141,6 +145,7 @@ func (model *MultipleBSCPairModel) EM(maxRounds int, tolerance float64,
 		initialScore = model.Score()
 		thisRound    = initialScore
 		lastRound    = thisRound - 1.0
+		softScores   = make(map[*variable.DiscreteRV]float64)
 	)
 
 	if callback != nil {
@@ -158,78 +163,101 @@ func (model *MultipleBSCPairModel) EM(maxRounds int, tolerance float64,
 			if ifFalse > ifTrue {
 				input.Set(0)
 			}
+			if model.SoftInputs {
+				softScores[input] = ifTrue / (ifTrue + ifFalse)
+			} else {
+				softScores[input] = input.Val()
+			}
 		}
 		if callback != nil {
 			callback(model, round, "input")
 		}
 
-		// Update the first layer of noise rates
-		var rates1 []float64
-		for _, noiseRate := range model.Noise1Rates {
-			var count, sum float64
-			for _, factor := range model.FactorGraph.AdjToVariable(noiseRate) {
-				if ch, ok := factor.(*bsc.BSCPairFactor); ok {
-					n2 := ch.NoiseRate2.Val()
-					count++
-					if ch.OutputMatchesInput() {
-						sum += n2
-					} else {
-						sum += 1 - n2
+		thisRound2, lastRound2 := thisRound, lastRound
+		for r2 := 1; (maxRounds == 0 || r2 <= maxRounds) &&
+			thisRound2-lastRound2 > tolerance; r2++ {
+
+			// Update the first layer of noise rates
+			var rates1 []float64
+			for _, noiseRate := range model.Noise1Rates {
+				var count, sum float64
+				for _, factor := range model.FactorGraph.AdjToVariable(noiseRate) {
+					if ch, ok := factor.(*bsc.BSCPairFactor); ok {
+						count++
+						qi := softScores[ch.Input]
+						n2 := ch.NoiseRate2.Val()
+						if ch.Output.Val() == 1 {
+							sum += qi*n2 + (1-qi)*(1-n2)
+						} else {
+							sum += qi*(1-n2) + (1-qi)*n2
+						}
 					}
 				}
+				noiseRate.Set(sum / count)
+				// noiseRate.Set((sum + model.Noise1Alpha.Val()) /
+				// 	(count + model.Noise1Alpha.Val() + model.Noise1Beta.Val()))
+				rates1 = append(rates1, noiseRate.Val())
 			}
-			noiseRate.Set((sum + model.Noise1Alpha.Val()) /
-				(count + model.Noise1Alpha.Val() + model.Noise1Beta.Val()))
-			rates1 = append(rates1, noiseRate.Val())
-		}
-		if callback != nil {
-			callback(model, round, "noise1")
-		}
-
-		// Update Beta prior for noise 1
-		if model.UpdateBeta1 {
-			model.Noise1Dist = model.Noise1Dist.MaximizeByMoM(rates1)
-			model.Noise1Alpha.Set(model.Noise1Dist.Alpha)
-			model.Noise1Beta.Set(model.Noise1Dist.Beta)
 			if callback != nil {
-				callback(model, round, "beta1")
+				callback(model, round, "noise1")
 			}
-		}
 
-		// Update the second layer of noise rates
-		var rates2 []float64
-		for _, noiseRate := range model.Noise2Rates {
-			var count, sum float64
-			for _, factor := range model.FactorGraph.AdjToVariable(noiseRate) {
-				if ch, ok := factor.(*bsc.BSCPairFactor); ok {
-					count++
-					n1 := ch.NoiseRate1.Val()
-					if ch.OutputMatchesInput() {
-						sum += n1
-					} else {
-						sum += 1 - n1
-					}
+			// Update Beta prior for noise 1
+			if model.UpdateBeta1 {
+				model.Noise1Dist = model.Noise1Dist.MaximizeByMoM(rates1)
+				model.Noise1Alpha.Set(model.Noise1Dist.Alpha)
+				model.Noise1Beta.Set(model.Noise1Dist.Beta)
+				if callback != nil {
+					callback(model, round, "beta1")
 				}
 			}
-			noiseRate.Set((sum + model.Noise2Alpha.Val()) /
-				(count + model.Noise2Alpha.Val() + model.Noise2Beta.Val()))
-			rates2 = append(rates2, noiseRate.Val())
-		}
-		if callback != nil {
-			callback(model, round, "noise2")
-		}
 
-		// Update Beta prior for noise 2
-		if model.UpdateBeta2 {
-			model.Noise2Dist = model.Noise2Dist.MaximizeByMoM(rates2)
-			model.Noise2Alpha.Set(model.Noise2Dist.Alpha)
-			model.Noise2Beta.Set(model.Noise2Dist.Beta)
-			if callback != nil {
-				callback(model, round, "beta2")
+			// Update the second layer of noise rates
+			var rates2 []float64
+			for _, noiseRate := range model.Noise2Rates {
+				var count, sum float64
+				for _, factor := range model.FactorGraph.AdjToVariable(noiseRate) {
+					if ch, ok := factor.(*bsc.BSCPairFactor); ok {
+						count++
+						qi := softScores[ch.Input]
+						n1 := ch.NoiseRate1.Val()
+						if ch.Output.Val() == 1 {
+							sum += qi*n1 + (1-qi)*(1-n1)
+						} else {
+							sum += qi*(1-n1) + (1-qi)*n1
+						}
+					}
+				}
+				noiseRate.Set(sum / count)
+				// noiseRate.Set((sum + model.Noise2Alpha.Val()) /
+				// 	(count + model.Noise2Alpha.Val() + model.Noise2Beta.Val()))
+				rates2 = append(rates2, noiseRate.Val())
 			}
-		}
+			if callback != nil {
+				callback(model, round, "noise2")
+			}
 
+			// Update Beta prior for noise 2
+			if model.UpdateBeta2 {
+				model.Noise2Dist = model.Noise2Dist.MaximizeByMoM(rates2)
+				model.Noise2Alpha.Set(model.Noise2Dist.Alpha)
+				model.Noise2Beta.Set(model.Noise2Dist.Beta)
+				if callback != nil {
+					callback(model, round, "beta2")
+				}
+			}
+			lastRound2, thisRound2 = thisRound2, model.Score()
+		}
 		lastRound, thisRound = thisRound, model.Score()
+	}
+	for _, input := range model.Inputs {
+		input.Set(0)
+		ifFalse := model.FactorGraph.ScoreVar(input)
+		input.Set(1)
+		ifTrue := model.FactorGraph.ScoreVar(input)
+		if ifFalse > ifTrue {
+			input.Set(0)
+		}
 	}
 	if callback != nil {
 		callback(model, 0, "Final")

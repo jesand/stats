@@ -13,10 +13,11 @@ func NewMultipleBSCModel(alpha, beta float64) *MultipleBSCModel {
 		NoiseAlpha:  variable.NewContinuousRV(alpha, dist.PositiveRealSpace),
 		NoiseBeta:   variable.NewContinuousRV(beta, dist.PositiveRealSpace),
 		NoiseDist:   dist.NewBetaDist(alpha, beta),
-		UpdateBeta:  true,
+		UpdateBeta:  false,
 		Inputs:      make(map[string]*variable.DiscreteRV),
 		Channels:    make(map[string]*bsc.BSC),
 		FactorGraph: factor.NewFactorGraph(),
+		SoftInputs:  true,
 	}
 }
 
@@ -37,6 +38,9 @@ type MultipleBSCModel struct {
 
 	// The variables sent over the noisy channels
 	Inputs map[string]*variable.DiscreteRV
+
+	// Whether to use soft or hard assignments to inputs during inference
+	SoftInputs bool
 
 	// The noisy channels
 	Channels map[string]*bsc.BSC
@@ -100,6 +104,7 @@ func (model *MultipleBSCModel) EM(maxRounds int, tolerance float64,
 		initialScore = model.Score()
 		thisRound    = initialScore
 		lastRound    = thisRound - 1.0
+		softScores   = make(map[*variable.DiscreteRV]float64)
 	)
 
 	if callback != nil {
@@ -117,42 +122,72 @@ func (model *MultipleBSCModel) EM(maxRounds int, tolerance float64,
 			if ifFalse > ifTrue {
 				input.Set(0)
 			}
+			if model.SoftInputs {
+				softScores[input] = ifTrue / (ifTrue + ifFalse)
+			} else {
+				softScores[input] = input.Val()
+			}
 		}
 		if callback != nil {
 			callback(model, round, "input")
 		}
 
 		// Update noise rates
-		var rates []float64
-		for _, ch := range model.Channels {
-			var tries, failures float64
-			for _, factor := range model.FactorGraph.AdjToVariable(ch.NoiseRate) {
-				if ch, ok := factor.(*bsc.BSCFactor); ok {
-					tries++
-					if !ch.OutputMatchesInput() {
-						failures++
+		thisRound2, lastRound2 := thisRound, lastRound
+		for r2 := 1; (maxRounds == 0 || r2 <= maxRounds) &&
+			thisRound2-lastRound2 > tolerance; r2++ {
+			var rates []float64
+			for _, ch := range model.Channels {
+				var sum, count float64
+				for _, factor := range model.FactorGraph.AdjToVariable(ch.NoiseRate) {
+					if ch, ok := factor.(*bsc.BSCFactor); ok {
+						count++
+						qi := softScores[ch.Input]
+						if ch.Output.Val() == 1 {
+							sum += qi
+						} else {
+							sum += 1 - qi
+						}
 					}
 				}
+				if sum == 0 {
+					ch.NoiseRate.Set(1e-3)
+				} else if sum == count {
+					ch.NoiseRate.Set(1 - 1e-3)
+				} else {
+					ch.NoiseRate.Set(sum / count)
+				}
+				// ch.NoiseRate.Set((failures + model.NoiseAlpha.Val()) /
+				// 	(tries + model.NoiseAlpha.Val() + model.NoiseBeta.Val()))
+				rates = append(rates, ch.NoiseRate.Val())
 			}
-			ch.NoiseRate.Set((failures + model.NoiseAlpha.Val()) /
-				(tries + model.NoiseAlpha.Val() + model.NoiseBeta.Val()))
-			rates = append(rates, ch.NoiseRate.Val())
-		}
-		if callback != nil {
-			callback(model, round, "noise")
-		}
-
-		// Update Beta prior
-		if model.UpdateBeta {
-			model.NoiseDist = model.NoiseDist.MaximizeByMoM(rates)
-			model.NoiseAlpha.Set(model.NoiseDist.Alpha)
-			model.NoiseBeta.Set(model.NoiseDist.Beta)
 			if callback != nil {
-				callback(model, round, "beta")
+				callback(model, round, "noise")
 			}
+
+			// Update Beta prior
+			if model.UpdateBeta {
+				model.NoiseDist = model.NoiseDist.MaximizeByMoM(rates)
+				model.NoiseAlpha.Set(model.NoiseDist.Alpha)
+				model.NoiseBeta.Set(model.NoiseDist.Beta)
+				if callback != nil {
+					callback(model, round, "beta")
+				}
+			}
+			lastRound2, thisRound2 = thisRound2, model.Score()
 		}
 
 		lastRound, thisRound = thisRound, model.Score()
+	}
+
+	for _, input := range model.Inputs {
+		input.Set(0)
+		ifFalse := model.FactorGraph.ScoreVar(input)
+		input.Set(1)
+		ifTrue := model.FactorGraph.ScoreVar(input)
+		if ifFalse > ifTrue {
+			input.Set(0)
+		}
 	}
 	if callback != nil {
 		callback(model, 0, "Final")

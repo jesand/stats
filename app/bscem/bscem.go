@@ -17,14 +17,16 @@ const (
         for a binary symmetric channel
 
 Usage:
-  bscem <prefs> <qrel> <research_task> <topic> [--pair]
+  bscem <prefs> <qrel> <research_task> <topic> [--majority] [--pair] [--soft]
 
 Options:
   <prefs>          A CSV file containing channel output
   <qrel>           The QREL containing gold standard assessments
   <research_task>  The research task to assess
   <topic>          The topic to assess
+  --majority       Use the majority vote model
   --pair           Use the BSCPair model
+  --soft           Use soft assignments during inference
 `
 
 	FldTaskStr    = "research_task"
@@ -49,10 +51,14 @@ func main() {
 		qrelPath    = args["<qrel>"].(string)
 		taskFilter  = args["<research_task>"].(string)
 		topicFilter = args["<topic>"].(string)
+		majModel    = args["--majority"].(bool)
 		pairModel   = args["--pair"].(bool)
+		soft        = args["--soft"].(bool)
 		fields      []string
 		rows        [][]string
 	)
+
+	fmt.Println("Training ", topicFilter, "with majority vote?", majModel, "with pair?", pairModel, "with soft?", soft)
 
 	// Initialize
 	if f, err := os.Open(file); err != nil {
@@ -144,8 +150,11 @@ func main() {
 	var (
 		mod1           = model.NewMultipleBSCModel(1, 1)
 		mod2           = model.NewMultipleBSCPairModel(1, 1, 1, 1)
+		majority       = make(map[string]map[string]int)
 		numPos, numNeg int
 	)
+	mod1.SoftInputs = soft
+	mod2.SoftInputs = soft
 	for _, row := range rows {
 		if row[fldTask] != taskFilter || row[fldTopic] != topicFilter ||
 			row[fldStatus] != ValApproved || row[fldVote] != ValLt {
@@ -159,12 +168,17 @@ func main() {
 		if big < small {
 			small, big = big, small
 		}
+		if _, ok := majority[small]; !ok {
+			majority[small] = make(map[string]int)
+		}
 		if small == winner {
 			isLt = true
 			numPos++
+			majority[small][big]++
 		} else {
 			isLt = false
 			numNeg++
+			majority[small][big]--
 		}
 		var (
 			question = fmt.Sprintf("%s %s", small, big)
@@ -184,7 +198,27 @@ func main() {
 	}
 	fmt.Println(numPos, "Pos", numNeg, "Neg")
 
-	if pairModel {
+	if majModel {
+		var correct, total float64
+		for small, bigs := range majority {
+			for big, score := range bigs {
+				var (
+					rel0 = qrel[small]
+					rel1 = qrel[big]
+					lt   = score > 0
+				)
+				if rel0 != rel1 {
+					total++
+					if lt && rel0 == 1 {
+						correct++
+					}
+				}
+			}
+		}
+
+		fmt.Printf("Majority vote accuracy: %d/%d = %f\n",
+			int(correct), int(total), correct/total)
+	} else if pairModel {
 
 		// Define an evaluation method
 		eval := func(mod *model.MultipleBSCPairModel, round int, stage string) {
