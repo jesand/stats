@@ -1,19 +1,17 @@
 package model
 
 import (
+	"fmt"
 	"github.com/jesand/stats/channel/bsc"
 	"github.com/jesand/stats/dist"
 	"github.com/jesand/stats/factor"
 	"github.com/jesand/stats/variable"
+	"math"
 )
 
-// Create a new MultipleBSCModel with the given Beta prior
-func NewMultipleBSCModel(alpha, beta float64) *MultipleBSCModel {
+// Create a new MultipleBSCModel
+func NewMultipleBSCModel() *MultipleBSCModel {
 	return &MultipleBSCModel{
-		NoiseAlpha:  variable.NewContinuousRV(alpha, dist.PositiveRealSpace),
-		NoiseBeta:   variable.NewContinuousRV(beta, dist.PositiveRealSpace),
-		NoiseDist:   dist.NewBetaDist(alpha, beta),
-		UpdateBeta:  false,
 		Inputs:      make(map[string]*variable.DiscreteRV),
 		Channels:    make(map[string]*bsc.BSC),
 		FactorGraph: factor.NewFactorGraph(),
@@ -26,15 +24,6 @@ func NewMultipleBSCModel(alpha, beta float64) *MultipleBSCModel {
 // used to infer the answers of independent binary-valued crowdsourcing
 // questions.
 type MultipleBSCModel struct {
-
-	// The parameters on a Beta prior for channel noise parameters
-	NoiseAlpha, NoiseBeta *variable.ContinuousRV
-
-	// The Beta prior for channel noise
-	NoiseDist *dist.Beta
-
-	// Indicates whether the Beta parameters should be updated after each round
-	UpdateBeta bool
 
 	// The variables sent over the noisy channels
 	Inputs map[string]*variable.DiscreteRV
@@ -52,17 +41,9 @@ type MultipleBSCModel struct {
 	FactorGraph *factor.FactorGraph
 }
 
-// Adds a new BSC to the model with the given name and noise rate. If noise
-// is zero, we sample from the beta prior.
+// Adds a new BSC to the model with the given name and noise rate.
 func (model *MultipleBSCModel) AddChannel(name string, noise float64) {
-	ch := bsc.NewBSC(model.NoiseDist.Sample())
-	if noise != 0 {
-		ch.NoiseRate.Set(noise)
-	}
-	model.Channels[name] = ch
-	model.FactorGraph.AddFactor(factor.NewDistFactor(
-		[]variable.RandomVariable{ch.NoiseRate, model.NoiseAlpha,
-			model.NoiseBeta}, model.NoiseDist))
+	model.Channels[name] = bsc.NewBSC(noise)
 }
 
 // Ask whether a given channel exists
@@ -119,14 +100,20 @@ func (model *MultipleBSCModel) EM(maxRounds int, tolerance float64,
 		// Update input
 		for _, input := range model.Inputs {
 			input.Set(0)
-			ifFalse := model.FactorGraph.ScoreVar(input)
+			ifFalse := math.Exp(model.FactorGraph.ScoreVar(input))
 			input.Set(1)
-			ifTrue := model.FactorGraph.ScoreVar(input)
+			ifTrue := math.Exp(model.FactorGraph.ScoreVar(input))
 			if ifFalse > ifTrue {
 				input.Set(0)
 			}
 			if model.SoftInputs {
-				softScores[input] = ifTrue / (ifTrue + ifFalse)
+				if ifTrue == 0 {
+					softScores[input] = 1e-6
+				} else if ifFalse == 0 {
+					softScores[input] = 1 - 1e-6
+				} else {
+					softScores[input] = ifTrue / (ifTrue + ifFalse)
+				}
 			} else {
 				softScores[input] = input.Val()
 			}
@@ -139,7 +126,6 @@ func (model *MultipleBSCModel) EM(maxRounds int, tolerance float64,
 		thisRound2, lastRound2 := thisRound, lastRound
 		for r2 := 1; (maxRounds == 0 || r2 <= maxRounds) &&
 			thisRound2-lastRound2 > tolerance; r2++ {
-			var rates []float64
 			for _, ch := range model.Channels {
 				var sum, count float64
 				for _, factor := range model.FactorGraph.AdjToVariable(ch.NoiseRate) {
@@ -160,23 +146,11 @@ func (model *MultipleBSCModel) EM(maxRounds int, tolerance float64,
 				} else {
 					ch.NoiseRate.Set(sum / count)
 				}
-				// ch.NoiseRate.Set((failures + model.NoiseAlpha.Val()) /
-				// 	(tries + model.NoiseAlpha.Val() + model.NoiseBeta.Val()))
-				rates = append(rates, ch.NoiseRate.Val())
 			}
 			if callback != nil {
 				callback(model, round, "noise")
 			}
 
-			// Update Beta prior
-			if model.UpdateBeta {
-				model.NoiseDist = model.NoiseDist.MaximizeByMoM(rates)
-				model.NoiseAlpha.Set(model.NoiseDist.Alpha)
-				model.NoiseBeta.Set(model.NoiseDist.Beta)
-				if callback != nil {
-					callback(model, round, "beta")
-				}
-			}
 			lastRound2, thisRound2 = thisRound2, model.Score()
 		}
 
@@ -186,13 +160,16 @@ func (model *MultipleBSCModel) EM(maxRounds int, tolerance float64,
 	model.InputScores = make(map[string]float64)
 	for name, input := range model.Inputs {
 		input.Set(0)
-		ifFalse := model.FactorGraph.ScoreVar(input)
+		ifFalse := math.Exp(model.FactorGraph.ScoreVar(input))
 		input.Set(1)
-		ifTrue := model.FactorGraph.ScoreVar(input)
+		ifTrue := math.Exp(model.FactorGraph.ScoreVar(input))
 		if ifFalse > ifTrue {
 			input.Set(0)
 		}
 		model.InputScores[name] = ifTrue / (ifTrue + ifFalse)
+	}
+	for name, ch := range model.Channels {
+		fmt.Println(name, "noise:", ch.NoiseRate.Val())
 	}
 	if callback != nil {
 		callback(model, 0, "Final")

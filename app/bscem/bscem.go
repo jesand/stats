@@ -7,6 +7,7 @@ import (
 	"github.com/jesand/stats/dist"
 	"github.com/jesand/stats/model"
 	"io"
+	"math/rand"
 	"os"
 	"strconv"
 	"strings"
@@ -17,14 +18,14 @@ const (
         for a binary symmetric channel
 
 Usage:
-  bscem <prefs> <qrel> <research_task> <topic> [--majority] [--pair] [--soft]
+  bscem <prefs> <qrel> <research_task> <topic> [--baseline] [--pair] [--soft]
 
 Options:
   <prefs>          A CSV file containing channel output
   <qrel>           The QREL containing gold standard assessments
   <research_task>  The research task to assess
   <topic>          The topic to assess
-  --majority       Use the majority vote model
+  --baseline       Use the majority vote and const-resp models
   --pair           Use the BSCPair model
   --soft           Use soft assignments during inference
 `
@@ -40,6 +41,8 @@ Options:
 
 	ValApproved = "Approved"
 	ValLt       = "win"
+
+	InitialNoise = 1e-3
 )
 
 func main() {
@@ -51,14 +54,14 @@ func main() {
 		qrelPath    = args["<qrel>"].(string)
 		taskFilter  = args["<research_task>"].(string)
 		topicFilter = args["<topic>"].(string)
-		majModel    = args["--majority"].(bool)
+		baseline    = args["--baseline"].(bool)
 		pairModel   = args["--pair"].(bool)
 		soft        = args["--soft"].(bool)
 		fields      []string
 		rows        [][]string
 	)
 
-	fmt.Println("Training ", topicFilter, "with majority vote?", majModel, "with pair?", pairModel, "with soft?", soft)
+	fmt.Println("Training ", topicFilter, "with baselines?", baseline, "with pair?", pairModel, "with soft?", soft)
 
 	// Initialize
 	if f, err := os.Open(file); err != nil {
@@ -146,10 +149,9 @@ func main() {
 
 	// Prepare a model for the data
 	fmt.Println("Building model...")
-	const initNoise = 1e-3
 	var (
-		mod1           = model.NewMultipleBSCModel(1, 1)
-		mod2           = model.NewMultipleBSCPairModel(1, 1, 1, 1)
+		mod1           = model.NewMultipleBSCModel()
+		mod2           = model.NewMultipleBSCPairModel()
 		majority       = make(map[string]map[string]int)
 		numPos, numNeg int
 	)
@@ -186,38 +188,56 @@ func main() {
 		)
 		if pairModel {
 			if !mod2.HasChannel(question, worker) {
-				mod2.AddChannel(question, initNoise, worker, initNoise)
+				mod2.AddChannel(question, InitialNoise, worker, InitialNoise)
 			}
 			mod2.AddObservation(question, question, worker, isLt)
 		} else {
 			if !mod1.HasChannel(worker) {
-				mod1.AddChannel(worker, initNoise)
+				mod1.AddChannel(worker, InitialNoise)
 			}
 			mod1.AddObservation(question, worker, isLt)
 		}
 	}
 	fmt.Println(numPos, "Pos", numNeg, "Neg")
 
-	if majModel {
-		var correct, total float64
+	if baseline {
+		var all1Correct, all0Correct, randCorrect, majCorrect, total float64
 		for small, bigs := range majority {
 			for big, score := range bigs {
 				var (
-					rel0 = qrel[small]
-					rel1 = qrel[big]
-					lt   = score > 0
+					rel0   = qrel[small]
+					rel1   = qrel[big]
+					ltMaj  = score > 0
+					ltAll1 = true
+					ltAll0 = false
+					ltRand = rand.Float64() > 0.5
 				)
 				if rel0 != rel1 {
 					total++
-					if lt && rel0 == 1 {
-						correct++
+					if ltMaj && rel0 == 1 {
+						majCorrect++
+					}
+					if ltAll1 && rel0 == 1 {
+						all1Correct++
+					}
+					if ltAll0 && rel0 == 1 {
+						all0Correct++
+					}
+					if ltRand && rel0 == 1 {
+						randCorrect++
 					}
 				}
 			}
 		}
 
 		fmt.Printf("Majority vote accuracy: %d/%d = %f\n",
-			int(correct), int(total), correct/total)
+			int(majCorrect), int(total), majCorrect/total)
+		fmt.Printf("All-true vote accuracy: %d/%d = %f\n",
+			int(all1Correct), int(total), all1Correct/total)
+		fmt.Printf("All-false vote accuracy: %d/%d = %f\n",
+			int(all0Correct), int(total), all0Correct/total)
+		fmt.Printf("Random vote accuracy: %d/%d = %f\n",
+			int(randCorrect), int(total), randCorrect/total)
 	} else if pairModel {
 
 		// Define an evaluation method
@@ -244,14 +264,6 @@ func main() {
 			} else {
 				fmt.Printf("Round %d %s score: %f accuracy: %d/%d = %f\n", round, stage,
 					mod.Score(), int(correct), int(total), correct/total)
-			}
-
-			if stage == "beta1" {
-				fmt.Printf("Beta1 parameters: alpha=%f beta=%f mean=%f variance=%f\n",
-					mod.Noise1Dist.Alpha, mod.Noise1Dist.Beta, mod.Noise1Dist.Mean(), mod.Noise1Dist.Variance())
-			} else if stage == "beta2" {
-				fmt.Printf("Beta2 parameters: alpha=%f beta=%f mean=%f variance=%f\n",
-					mod.Noise2Dist.Alpha, mod.Noise2Dist.Beta, mod.Noise2Dist.Mean(), mod.Noise2Dist.Variance())
 			}
 		}
 
@@ -285,10 +297,6 @@ func main() {
 			} else {
 				fmt.Printf("Round %d %s score: %f accuracy: %d/%d = %f\n", round, stage,
 					mod.Score(), int(correct), int(total), correct/total)
-			}
-			if stage == "beta" {
-				fmt.Printf("Beta parameters: alpha=%f beta=%f mean=%f variance=%f\n",
-					mod.NoiseDist.Alpha, mod.NoiseDist.Beta, mod.NoiseDist.Mean(), mod.NoiseDist.Variance())
 			}
 		}
 

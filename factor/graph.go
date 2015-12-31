@@ -65,7 +65,7 @@ func (graph FactorGraph) AdjToVariable(v variable.RandomVariable) []Factor {
 	}
 }
 
-// Get the score for a particular variable
+// Get the score (log probability measure) for a particular variable
 func (graph FactorGraph) ScoreVar(v variable.RandomVariable) float64 {
 	var score float64
 	for _, factor := range graph.AdjToVariable(v) {
@@ -74,7 +74,7 @@ func (graph FactorGraph) ScoreVar(v variable.RandomVariable) float64 {
 	return score
 }
 
-// Get the score for the entire factor graph
+// Get the score (log probability) for the entire factor graph
 func (graph FactorGraph) Score() float64 {
 	var score float64
 	for _, factor := range graph.Factors {
