@@ -21,4 +21,27 @@ func TestUtil(t *testing.T) {
 		So(Variance(x2), ShouldEqual, 0)
 		So(Variance(x3), ShouldAlmostEqual, 1.666666666666667)
 	})
+	Convey("Test Min()", t, func() {
+		So(Min(x1), ShouldEqual, 0)
+		So(Min(x2), ShouldEqual, 1)
+		So(Min(x3), ShouldEqual, 1)
+	})
+	Convey("Test MinGt()", t, func() {
+		So(MinGt(x1, 0), ShouldEqual, 0)
+		So(MinGt(x2, 0), ShouldEqual, 1)
+		So(MinGt(x2, 1), ShouldEqual, 1)
+		So(MinGt(x3, 1), ShouldEqual, 2)
+	})
+	Convey("Test Max()", t, func() {
+		So(Max(x1), ShouldEqual, 0)
+		So(Max(x2), ShouldEqual, 1)
+		So(Max(x3), ShouldEqual, 4)
+	})
+	Convey("Test MaxLt()", t, func() {
+		So(MaxLt(x1, 0), ShouldEqual, 0)
+		So(MaxLt(x2, 0), ShouldEqual, 0)
+		So(MaxLt(x2, 1), ShouldEqual, 1)
+		So(MaxLt(x2, 2), ShouldEqual, 1)
+		So(MaxLt(x3, 3), ShouldEqual, 2)
+	})
 }
