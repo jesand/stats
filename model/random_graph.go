@@ -22,9 +22,17 @@ func RandomBipartiteGraph(leftDegrees, rightDegrees []int, maxTries int) (edges 
 	)
 	for _, d := range leftDegrees {
 		totalLeft += d
+		if d > len(rightDegrees) {
+			return nil, fmt.Errorf("Invalid left graph degree %d for %d right graph nodes",
+				d, len(rightDegrees))
+		}
 	}
 	for _, d := range rightDegrees {
 		totalRight += d
+		if d > len(leftDegrees) {
+			return nil, fmt.Errorf("Invalid right graph degree %d for %d left graph nodes",
+				d, len(leftDegrees))
+		}
 	}
 	if totalLeft == 0 && totalRight == 0 {
 		return nil, fmt.Errorf("Total node degree is zero")
