@@ -1,7 +1,6 @@
 package model
 
 import (
-	"fmt"
 	"github.com/jesand/stats/channel/bsc"
 	"github.com/jesand/stats/dist"
 	"github.com/jesand/stats/factor"
@@ -184,19 +183,13 @@ func (model *MultipleBSCPairModel) EM(maxRounds int, tolerance float64,
 			}
 
 			// Update the second layer of noise rates
-			for name, noiseRate := range model.Noise2Rates {
+			for _, noiseRate := range model.Noise2Rates {
 				var count, sum float64
 				for _, factor := range model.FactorGraph.AdjToVariable(noiseRate) {
 					if ch, ok := factor.(*bsc.BSCPairFactor); ok {
 						count++
 						qi := softScores[ch.Input]
-						if math.IsNaN(qi) {
-							fmt.Println("nan qi")
-						}
 						n1 := ch.NoiseRate1.Val()
-						if math.IsNaN(n1) {
-							fmt.Println("nan n1")
-						}
 						if ch.Output.Val() == 1 {
 							sum += qi*n1 + (1-qi)*(1-n1)
 						} else {
@@ -210,9 +203,6 @@ func (model *MultipleBSCPairModel) EM(maxRounds int, tolerance float64,
 					noiseRate.Set(1 - 1e-3)
 				} else {
 					noiseRate.Set(sum / count)
-				}
-				if name == "A2EMHS44GZC3AZ" {
-					fmt.Println(name, sum, count, noiseRate.Val())
 				}
 			}
 			if callback != nil {
@@ -234,12 +224,6 @@ func (model *MultipleBSCPairModel) EM(maxRounds int, tolerance float64,
 			input.Set(0)
 		}
 		model.InputScores[name] = ifTrue / (ifTrue + ifFalse)
-	}
-	for name, rv := range model.Noise1Rates {
-		fmt.Println(name, "noise:", rv.Val())
-	}
-	for name, rv := range model.Noise2Rates {
-		fmt.Println(name, "noise:", rv.Val())
 	}
 
 	if callback != nil {
