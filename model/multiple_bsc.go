@@ -1,7 +1,6 @@
 package model
 
 import (
-	"fmt"
 	"github.com/jesand/stats/channel/bsc"
 	"github.com/jesand/stats/dist"
 	"github.com/jesand/stats/factor"
@@ -167,9 +166,6 @@ func (model *MultipleBSCModel) EM(maxRounds int, tolerance float64,
 			input.Set(0)
 		}
 		model.InputScores[name] = ifTrue / (ifTrue + ifFalse)
-	}
-	for name, ch := range model.Channels {
-		fmt.Println(name, "noise:", ch.NoiseRate.Val())
 	}
 	if callback != nil {
 		callback(model, 0, "Final")
